@@ -1,6 +1,6 @@
 import torch
 from torch.nn import Conv2d, Module
-from unet import Unet
+from Model.unet import Unet
 
 
 class CombinedModel(Module):

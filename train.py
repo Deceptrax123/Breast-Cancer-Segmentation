@@ -6,7 +6,84 @@ import gc
 from sklearn.model_selection import train_test_split
 from cancer_dataset import BreastCancerDataset
 from dotenv import load_dotenv
+from Model.model import CombinedModel
 import os
+
+
+def train_step():
+    epoch_loss = 0
+
+    for step, (x_sample, y_sample) in enumerate(train_loader):
+        x_sample = x_sample.to(device=device)
+        y_sample = y_sample.to(device=device)
+
+        # Predictionns-Forward propagation
+        predictions = model(x_sample)
+
+        # Backpropagation
+        model.zero_grad()
+
+        loss_value = loss(predictions, y_sample)
+
+        loss_value.backward()
+        model_optimizer.step()
+
+        # Add losses
+        epoch_loss += loss_value.item()
+
+        # Memory
+        del x_sample
+        del y_sample
+        del predictions
+
+        mps.empty_cache()
+
+    return epoch_loss/train_steps
+
+
+def test_step():
+    epoch_loss = 0
+
+    for step, (x_sample, y_sample) in enumerate(test_loader):
+        x_sample = x_sample.to(device=device)
+        y_sample = y_sample.to(device=device)
+
+        # Predictionns-Forward propagation
+        predictions = model(x_sample)
+
+        loss_value = loss(predictions, y_sample)
+        # Add losses
+        epoch_loss += loss_value.item()
+
+        # Memory
+        del x_sample
+        del y_sample
+        del predictions
+
+        mps.empty_cache()
+
+    return epoch_loss/test_steps
+
+
+def training_loop():
+
+    for epoch in range(num_epochs):
+        model.train(True)  # switch model to train mode
+
+        train_loss = train_step()
+        model.eval()
+
+        with torch.no_grad():
+            test_loss = test_step()
+
+            print("Epoch: ", epoch+1)
+            print("Train Loss: ", train_loss)
+            print("Test Loss: ", test_loss)
+
+            # checkpoints
+            if ((epoch+1) % 10 == 0):
+                torch.save(model.state_dict(),
+                           'weights/model{epoch}.pth'.format(epoch=epoch+1))
 
 
 if __name__ == '__main__':
@@ -65,3 +142,19 @@ if __name__ == '__main__':
 
     # Device
     device = torch.device("mps")
+
+    # Hyperparameters
+    lr = 0.001
+    num_epochs = 100
+
+    model = CombinedModel().to(device=device)
+    model_optimizer = torch.optim.Adam(
+        model.parameters(), lr=lr, betas=(0.9, 0.999), weight_decay=0.001)
+
+    # Loss function
+    loss = nn.BCEWithLogitsLoss()  # More stable than BCELoss()
+
+    train_steps = (len(train_set)+params['batch_size'])//params['batch_size']
+    test_steps = (len(test_set)+params['batch_size'])//params['batch_size']
+
+    training_loop()
