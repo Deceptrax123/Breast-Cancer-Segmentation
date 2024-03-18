@@ -8,6 +8,7 @@ from cancer_dataset import BreastCancerDataset
 from dotenv import load_dotenv
 import os
 
+
 if __name__ == '__main__':
     torch.multiprocessing.set_sharing_strategy(
         'file_system')  # Ensures that there is no file limit
@@ -64,9 +65,3 @@ if __name__ == '__main__':
 
     # Device
     device = torch.device("mps")
-
-    # Test the dataloader
-    for i, (x, y) in enumerate(train_loader):
-        print(x.size())
-
-        break
