@@ -37,5 +37,6 @@ class DiceLoss(Module):
 
             score += dice
         score = score/channels
-        # likelihood = torch.log1p(torch.cosh(1-score))
-        return (1-score).mean()
+
+        likelihood = torch.log1p(torch.cosh(1-score))
+        return likelihood

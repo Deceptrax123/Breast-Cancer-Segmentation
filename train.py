@@ -10,6 +10,8 @@ from losses import DiceLoss
 from cancer_dataset import BreastCancerDataset
 from dotenv import load_dotenv
 from Model.model import CombinedModel
+from Model.model import Unet
+from torchsummary import summary
 import os
 
 
@@ -187,7 +189,7 @@ if __name__ == '__main__':
 
     # Hyperparameters
     lr = 0.001
-    num_epochs = 100
+    num_epochs = 1000
 
     model = CombinedModel().to(device=device)
     model_optimizer = torch.optim.Adam(
@@ -196,4 +198,6 @@ if __name__ == '__main__':
     train_steps = (len(train_set)+params['batch_size'])//params['batch_size']
     test_steps = (len(test_set)+params['batch_size'])//params['batch_size']
 
-    training_loop()
+    m = Unet(filters=4)
+
+    summary(model=m, input_size=(4, 512, 512), batch_size=-1, device='cpu')
