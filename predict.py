@@ -38,6 +38,8 @@ if __name__ == '__main__':
     img = Image.open(path+random_img_path)
     mask = Image.open(mask_path+random_img_path)
 
+    mask = mask.resize((512, 512), Image.LANCZOS)
+
     tens_transform = T.Compose([
         T.Resize((512, 512)), T.ToTensor(), T.Normalize(
             mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))])
