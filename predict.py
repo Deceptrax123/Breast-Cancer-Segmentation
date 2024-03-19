@@ -12,7 +12,7 @@ import cv2
 
 
 if __name__ == '__main__':
-    weights = torch.load("weights/model1030.pth", map_location='cpu')
+    weights = torch.load("weights/best.pth", map_location='cpu')
 
     load_dotenv('.env')
 
