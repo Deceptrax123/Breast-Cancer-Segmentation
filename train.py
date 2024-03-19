@@ -174,7 +174,7 @@ if __name__ == '__main__':
         zip(image_paths_new, mask_paths_new))
 
     # Train-test split
-    train, test = train_test_split(paths_dataset, train_size=0.95)
+    train, test = train_test_split(paths_dataset, train_size=0.90)
 
     # Call the dataset
     train_set = BreastCancerDataset(train)

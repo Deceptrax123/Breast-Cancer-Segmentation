@@ -12,7 +12,7 @@ import cv2
 
 
 if __name__ == '__main__':
-    weights = torch.load("weights/model100.pth")
+    weights = torch.load("weights/model1000.pth", map_location='cpu')
 
     load_dotenv('.env')
 
@@ -48,10 +48,16 @@ if __name__ == '__main__':
     predictions_probabs = f.sigmoid(predictions)
 
     # Get the Mask
-    preds = torch.argmax(predictions_probabs, dim=1)
-    predictions_probs = torch.zeros_like(
-        predictions_probabs).scatter_(1, preds.unsqueeze(1), 1.)
+    preds = torch.where(predictions_probabs > 0.5, 1, 0)
 
-    predictions_probs = predictions_probs.permute(0, 2, 3, 1)
+    preds_img = preds.permute(0, 2, 3, 1)
+    preds_img_np = preds_img.detach().numpy()
 
-    print(predictions_probs.unique())
+    fig = plt.figure(figsize=(10, 10), dpi=72)
+    ax1 = fig.add_subplot(1, 2, 1)
+    ax1.imshow(np.array(img))
+
+    ax2 = fig.add_subplot(1, 2, 2)
+    ax2.imshow(preds_img_np[0])
+
+    plt.show()
