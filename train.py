@@ -198,6 +198,4 @@ if __name__ == '__main__':
     train_steps = (len(train_set)+params['batch_size'])//params['batch_size']
     test_steps = (len(test_set)+params['batch_size'])//params['batch_size']
 
-    m = Unet(filters=4)
-
-    summary(model=m, input_size=(4, 512, 512), batch_size=-1, device='cpu')
+    training_loop()
