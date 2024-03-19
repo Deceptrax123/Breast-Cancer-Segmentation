@@ -2,26 +2,58 @@ import torch
 from torch.utils.data import DataLoader
 from torch import nn
 from torch import mps, cpu
+import numpy as np
 import gc
 from sklearn.model_selection import train_test_split
+from metrics import overall_dice_score
+from losses import DiceLoss
 from cancer_dataset import BreastCancerDataset
 from dotenv import load_dotenv
 from Model.model import CombinedModel
 import os
 
 
+def compute_weights(y_sample):
+    channels = 1
+    counts = list()
+    for i in range(channels):
+        spectral_region = y_sample[:, i, :, :]
+
+        ones = (spectral_region == 1.).sum()
+
+        if ones == 0:
+            ones = np.inf
+        counts.append(ones)
+
+    total_pixels = y_sample.size(0)*512*512
+
+    counts = np.array(counts)
+    weights = counts/total_pixels
+
+    inverse = (1/weights)
+    inverse = inverse.astype(np.float32)
+    return inverse
+
+
 def train_step():
     epoch_loss = 0
+    dice_score = 0
 
     for step, (x_sample, y_sample) in enumerate(train_loader):
+        weights = compute_weights(y_sample)
         x_sample = x_sample.to(device=device)
         y_sample = y_sample.to(device=device)
+        weights = torch.from_numpy(weights).to(device=device)
 
         # Predictionns-Forward propagation
         predictions = model(x_sample)
 
         # Backpropagation
         model.zero_grad()
+
+        # Loss function
+        # More stable than BCELoss()
+        loss = DiceLoss(weights=weights)
 
         loss_value = loss(predictions, y_sample)
 
@@ -30,6 +62,7 @@ def train_step():
 
         # Add losses
         epoch_loss += loss_value.item()
+        dice_score += overall_dice_score(predictions, y_sample).item()
 
         # Memory
         del x_sample
@@ -38,22 +71,29 @@ def train_step():
 
         mps.empty_cache()
 
-    return epoch_loss/train_steps
+    return epoch_loss/train_steps, dice_score/train_steps
 
 
 def test_step():
     epoch_loss = 0
+    dice_score = 0
 
     for step, (x_sample, y_sample) in enumerate(test_loader):
+        weights = compute_weights(y_sample)
         x_sample = x_sample.to(device=device)
         y_sample = y_sample.to(device=device)
+        weights = torch.from_numpy(weights).to(device=device)
 
         # Predictionns-Forward propagation
         predictions = model(x_sample)
 
+        # loss = nn.BCEWithLogitsLoss()
+        loss = DiceLoss(weights=weights)
         loss_value = loss(predictions, y_sample)
+
         # Add losses
         epoch_loss += loss_value.item()
+        dice_score += overall_dice_score(predictions, y_sample).item()
 
         # Memory
         del x_sample
@@ -62,7 +102,7 @@ def test_step():
 
         mps.empty_cache()
 
-    return epoch_loss/test_steps
+    return epoch_loss/test_steps, dice_score/test_steps
 
 
 def training_loop():
@@ -70,15 +110,17 @@ def training_loop():
     for epoch in range(num_epochs):
         model.train(True)  # switch model to train mode
 
-        train_loss = train_step()
+        train_loss, train_dice = train_step()
         model.eval()
 
         with torch.no_grad():
-            test_loss = test_step()
+            test_loss, test_dice = test_step()
 
             print("Epoch: ", epoch+1)
             print("Train Loss: ", train_loss)
+            print("Train Dice", train_dice)
             print("Test Loss: ", test_loss)
+            print("Test Dice: ", test_dice)
 
             # checkpoints
             if ((epoch+1) % 10 == 0):
@@ -130,7 +172,7 @@ if __name__ == '__main__':
         zip(image_paths_new, mask_paths_new))
 
     # Train-test split
-    train, test = train_test_split(paths_dataset, train_size=0.85)
+    train, test = train_test_split(paths_dataset, train_size=0.95)
 
     # Call the dataset
     train_set = BreastCancerDataset(train)
@@ -150,9 +192,6 @@ if __name__ == '__main__':
     model = CombinedModel().to(device=device)
     model_optimizer = torch.optim.Adam(
         model.parameters(), lr=lr, betas=(0.9, 0.999), weight_decay=0.001)
-
-    # Loss function
-    loss = nn.BCEWithLogitsLoss()  # More stable than BCELoss()
 
     train_steps = (len(train_set)+params['batch_size'])//params['batch_size']
     test_steps = (len(test_set)+params['batch_size'])//params['batch_size']
