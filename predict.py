@@ -23,6 +23,7 @@ if __name__ == '__main__':
     model.load_state_dict(weights)
 
     path = os.getenv("Images")
+    mask_path = os.getenv("Mask")
 
     xpaths = sorted(os.listdir(path))
 
@@ -35,6 +36,7 @@ if __name__ == '__main__':
     random_img_path = random.choice(xps)
 
     img = Image.open(path+random_img_path)
+    mask = Image.open(mask_path+random_img_path)
 
     tens_transform = T.Compose([
         T.Resize((512, 512)), T.ToTensor(), T.Normalize(
@@ -54,10 +56,16 @@ if __name__ == '__main__':
     preds_img_np = preds_img.detach().numpy()
 
     fig = plt.figure(figsize=(10, 10), dpi=72)
-    ax1 = fig.add_subplot(1, 2, 1)
+    ax1 = fig.add_subplot(1, 3, 1)
     ax1.imshow(np.array(img))
+    ax1.set_title("Input")
 
-    ax2 = fig.add_subplot(1, 2, 2)
-    ax2.imshow(preds_img_np[0])
+    ax2 = fig.add_subplot(1, 3, 2)
+    ax2.imshow(np.array(mask))
+    ax2.set_title("Ground truth")
+
+    ax3 = fig.add_subplot(1, 3, 3)
+    ax3.imshow(preds_img_np[0])
+    ax3.set_title("Predicted")
 
     plt.show()
