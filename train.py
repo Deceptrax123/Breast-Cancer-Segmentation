@@ -127,7 +127,7 @@ def training_loop():
             # checkpoints
             if ((epoch+1) % 10 == 0):
                 torch.save(model.state_dict(),
-                           'weights/model{epoch}.pth'.format(epoch=epoch+1))
+                           'weights/model{epoch}.pth'.format(epoch=epoch+1001))
 
 
 if __name__ == '__main__':
@@ -192,6 +192,9 @@ if __name__ == '__main__':
     num_epochs = 1000
 
     model = CombinedModel().to(device=device)
+    model.load_state_dict(torch.load(
+        "weights/model1000.pth", map_location='mps'))
+
     model_optimizer = torch.optim.Adam(
         model.parameters(), lr=lr, betas=(0.9, 0.999), weight_decay=0.001)
 
