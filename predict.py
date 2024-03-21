@@ -2,7 +2,7 @@ import numpy as np
 import torch
 import torchvision.transforms as T
 import matplotlib.pyplot as plt
-from Model.model import CombinedModel
+from Model.Unet.model import CombinedModel
 from dotenv import load_dotenv
 import torch.nn.functional as f
 import os

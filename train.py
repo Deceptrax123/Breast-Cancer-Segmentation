@@ -8,9 +8,10 @@ from sklearn.model_selection import train_test_split
 from metrics import overall_dice_score
 from losses import DiceLoss
 from cancer_dataset import BreastCancerDataset
+from torchmetrics.classification import BinaryRecall, BinaryPrecision
 from dotenv import load_dotenv
-from Model.model import CombinedModel
-from Model.model import Unet
+from Model.Unet.model import CombinedModel
+from Model.Unet.model import Unet
 from torchsummary import summary
 import os
 
@@ -40,6 +41,8 @@ def compute_weights(y_sample):
 def train_step():
     epoch_loss = 0
     dice_score = 0
+    rec = 0
+    prec = 0
 
     for step, (x_sample, y_sample) in enumerate(train_loader):
         weights = compute_weights(y_sample)
@@ -48,14 +51,14 @@ def train_step():
         weights = torch.from_numpy(weights).to(device=device)
 
         # Predictionns-Forward propagation
-        predictions = model(x_sample)
+        predictions, probs = model(x_sample)
 
         # Backpropagation
         model.zero_grad()
 
         # Loss function
         # More stable than BCELoss()
-        loss = DiceLoss(weights=weights)
+        loss = nn.BCEWithLogitsLoss(weight=weights)
 
         loss_value = loss(predictions, y_sample)
 
@@ -64,7 +67,11 @@ def train_step():
 
         # Add losses
         epoch_loss += loss_value.item()
+
+        # Add Metrics
         dice_score += overall_dice_score(predictions, y_sample).item()
+        prec += precision(probs, y_sample).item()
+        rec += recall(probs, y_sample).item()
 
         # Memory
         del x_sample
@@ -73,12 +80,14 @@ def train_step():
 
         mps.empty_cache()
 
-    return epoch_loss/train_steps, dice_score/train_steps
+    return epoch_loss/train_steps, dice_score/train_steps, prec/train_steps, rec/train_steps
 
 
 def test_step():
     epoch_loss = 0
     dice_score = 0
+    prec = 0
+    rec = 0
 
     for step, (x_sample, y_sample) in enumerate(test_loader):
         weights = compute_weights(y_sample)
@@ -87,15 +96,16 @@ def test_step():
         weights = torch.from_numpy(weights).to(device=device)
 
         # Predictionns-Forward propagation
-        predictions = model(x_sample)
+        predictions, probs = model(x_sample)
 
-        # loss = nn.BCEWithLogitsLoss()
-        loss = DiceLoss(weights=weights)
+        loss = nn.BCEWithLogitsLoss(weight=weights)
         loss_value = loss(predictions, y_sample)
 
         # Add losses
         epoch_loss += loss_value.item()
         dice_score += overall_dice_score(predictions, y_sample).item()
+        prec += precision(probs, y_sample).item()
+        rec += recall(probs, y_sample).item()
 
         # Memory
         del x_sample
@@ -104,7 +114,7 @@ def test_step():
 
         mps.empty_cache()
 
-    return epoch_loss/test_steps, dice_score/test_steps
+    return epoch_loss/test_steps, dice_score/test_steps, prec/test_steps, rec/test_steps
 
 
 def training_loop():
@@ -112,22 +122,27 @@ def training_loop():
     for epoch in range(num_epochs):
         model.train(True)  # switch model to train mode
 
-        train_loss, train_dice = train_step()
+        train_loss, train_dice, train_precision, train_recall = train_step()
         model.eval()
 
         with torch.no_grad():
-            test_loss, test_dice = test_step()
+            test_loss, test_dice, test_precision, test_recall = test_step()
 
             print("Epoch: ", epoch+1)
             print("Train Loss: ", train_loss)
-            print("Train Dice", train_dice)
+            print("Train Dice: ", train_dice)
+            print("Train Precision: ", train_precision)
+            print("Test Precision: ", test_precision)
+
             print("Test Loss: ", test_loss)
             print("Test Dice: ", test_dice)
+            print("Test Precision: ", test_precision)
+            print("Test Recall: ", test_recall)
 
             # checkpoints
             if ((epoch+1) % 10 == 0):
                 torch.save(model.state_dict(),
-                           'weights/model{epoch}.pth'.format(epoch=epoch+1001))
+                           'weights/BCE_Unet/model{epoch}.pth'.format(epoch=epoch+1))
 
 
 if __name__ == '__main__':
@@ -174,7 +189,7 @@ if __name__ == '__main__':
         zip(image_paths_new, mask_paths_new))
 
     # Train-test split
-    train, test = train_test_split(paths_dataset, train_size=0.90)
+    train, test = train_test_split(paths_dataset, train_size=0.80)
 
     # Call the dataset
     train_set = BreastCancerDataset(train)
@@ -192,8 +207,10 @@ if __name__ == '__main__':
     num_epochs = 1000
 
     model = CombinedModel().to(device=device)
-    model.load_state_dict(torch.load(
-        "weights/model1000.pth", map_location='mps'))
+
+    # Metrics
+    precision = BinaryPrecision().to(device=device)
+    recall = BinaryRecall().to(device=device)
 
     model_optimizer = torch.optim.Adam(
         model.parameters(), lr=lr, betas=(0.9, 0.999), weight_decay=0.001)

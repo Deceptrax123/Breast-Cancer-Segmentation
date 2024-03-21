@@ -31,10 +31,8 @@ class BreastCancerDataset(torch.utils.data.Dataset):
             T.Resize(size=(512, 512)), T.ToTensor(), T.Normalize(
                 mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
         ])
-
         process_function_y = T.Compose([
-            T.Resize(size=(512, 512)), T.ToTensor()
-        ])
+            T.Resize(size=(512, 512), interpolation=0), T.ToTensor()])  # Use Nearest Interpolation
 
         x_tensor = process_function_x(x_img)
         y_tensor = process_function_y(y_img)
