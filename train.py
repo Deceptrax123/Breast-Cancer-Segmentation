@@ -59,7 +59,7 @@ def train_step():
 
         # Loss function
         # More stable than BCELoss()
-        loss = nn.BCEWithLogitsLoss(weight=weights)
+        loss = DiceLoss(weights=weights)
 
         loss_value = loss(predictions, y_sample)
 
@@ -104,7 +104,7 @@ def test_step():
         # Predictionns-Forward propagation
         predictions, probs = model(x_sample)
 
-        loss = nn.BCEWithLogitsLoss(weight=weights)
+        loss = DiceLoss(weights=weights)
         loss_value = loss(predictions, y_sample)
 
         # Add losses
@@ -143,6 +143,7 @@ def training_loop():
             print("Train Loss: ", train_loss)
             print("Train Dice: ", train_dice)
             print("Train Precision: ", train_precision)
+            print("Train Precision: ", train_precision)
             print("Test Precision: ", test_precision)
 
             print("Test Loss: ", test_loss)
@@ -162,9 +163,9 @@ def training_loop():
             })
 
             # checkpoints
-            if ((epoch+1) % 10 == 0):
+            if ((epoch+1) % 10 == 0 and epoch >= 1000):
                 torch.save(model.state_dict(),
-                           'weights/BCE_Unet/model{epoch}.pth'.format(epoch=epoch+1))
+                           'weights/log_cosh_Unet/model{epoch}.pth'.format(epoch=epoch+1))
 
 
 if __name__ == '__main__':
@@ -219,7 +220,7 @@ if __name__ == '__main__':
         zip(image_paths_new, mask_paths_new))
 
     # Train-test split
-    train, test = train_test_split(paths_dataset, train_size=0.80)
+    train, test = train_test_split(paths_dataset, train_size=0.85)
 
     # Call the dataset
     train_set = BreastCancerDataset(train)
@@ -234,7 +235,7 @@ if __name__ == '__main__':
 
     # Hyperparameters
     lr = 0.001
-    num_epochs = 1000
+    num_epochs = 5000
 
     model = CombinedModel().to(device=device)
 
