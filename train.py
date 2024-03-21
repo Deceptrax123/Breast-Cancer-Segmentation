@@ -12,6 +12,7 @@ from torchmetrics.classification import BinaryRecall, BinaryPrecision
 from dotenv import load_dotenv
 from Model.Unet.model import CombinedModel
 from Model.Unet.model import Unet
+import wandb
 from torchsummary import summary
 import os
 
@@ -70,6 +71,11 @@ def train_step():
 
         # Add Metrics
         dice_score += overall_dice_score(predictions, y_sample).item()
+
+        # Detach tensors from GPU
+        probs = probs.to(device='cpu')
+        y_sample = y_sample.to(device='cpu')
+
         prec += precision(probs, y_sample).item()
         rec += recall(probs, y_sample).item()
 
@@ -104,6 +110,11 @@ def test_step():
         # Add losses
         epoch_loss += loss_value.item()
         dice_score += overall_dice_score(predictions, y_sample).item()
+
+        # Detach tensors from GPU
+        probs = probs.to(device='cpu')
+        y_sample = y_sample.to(device='cpu')
+
         prec += precision(probs, y_sample).item()
         rec += recall(probs, y_sample).item()
 
@@ -139,6 +150,17 @@ def training_loop():
             print("Test Precision: ", test_precision)
             print("Test Recall: ", test_recall)
 
+            wandb.log({
+                "Train Loss": train_loss,
+                "Test Loss": test_loss,
+                "Train Precision": train_precision,
+                "Train Recall": train_recall,
+                "Train Dice": train_dice,
+                "Test Precision": test_precision,
+                "Test Recall": test_recall,
+                "Test Dice": test_dice
+            })
+
             # checkpoints
             if ((epoch+1) % 10 == 0):
                 torch.save(model.state_dict(),
@@ -161,6 +183,14 @@ if __name__ == '__main__':
         'shuffle': True,
         'num_workers': 0
     }
+
+    wandb.init(
+        project='Loss-Functions-Breast-Cancer',
+        config={
+            "arcitecture": "DL Models",
+            "dataset": "Breast cancer dataset"
+        }
+    )
 
     # Store paths in a list
     image_env_paths = os.getenv("Images")
@@ -209,8 +239,8 @@ if __name__ == '__main__':
     model = CombinedModel().to(device=device)
 
     # Metrics
-    precision = BinaryPrecision().to(device=device)
-    recall = BinaryRecall().to(device=device)
+    precision = BinaryPrecision()
+    recall = BinaryRecall()
 
     model_optimizer = torch.optim.Adam(
         model.parameters(), lr=lr, betas=(0.9, 0.999), weight_decay=0.001)
