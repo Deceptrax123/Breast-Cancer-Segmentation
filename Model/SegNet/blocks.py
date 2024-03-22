@@ -30,9 +30,7 @@ class Output_Block(Module):
     def __init__(self, features):
         super(Output_Block, self).__init__()
         self.conv = ConvTranspose2d(
-            in_channels=features, out_channels=3, stride=1, padding=1, kernel_size=(3, 3))
-        self.bn = BatchNorm2d(3)
-        self.relu = ReLU()
+            in_channels=features, out_channels=1, stride=1, padding=1, kernel_size=(3, 3))
 
     def _init_weights(self, module):
         if isinstance(module, (Conv2d, BatchNorm2d)):
@@ -44,8 +42,6 @@ class Output_Block(Module):
 
     def forward(self, x):
         x = self.conv(x)
-        x = self.bn(x)
-        x = self.relu(x)
 
         return x
 

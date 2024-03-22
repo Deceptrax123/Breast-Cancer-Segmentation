@@ -1,6 +1,7 @@
 import torch
 from Model.SegNet.blocks import Enc_Block, Dec_Block, Input_Block, Output_Block
 from torch.nn import Module
+import torch.nn.functional as f
 from torchsummary import summary
 
 
@@ -62,4 +63,4 @@ class SegNetModel(Module):
 
         x = self.classifier(x)
 
-        return x
+        return x, f.sigmoid(x)

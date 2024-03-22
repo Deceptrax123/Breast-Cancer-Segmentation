@@ -165,7 +165,7 @@ def training_loop():
             # checkpoints
             if ((epoch+1) % 10 == 0 and epoch >= 1000):
                 torch.save(model.state_dict(),
-                           'weights/log_cosh_unet/model{epoch}.pth'.format(epoch=epoch+1))
+                           'weights/segnet_diceloss/model{epoch}.pth'.format(epoch=epoch+1))
 
 
 if __name__ == '__main__':
@@ -237,7 +237,7 @@ if __name__ == '__main__':
     lr = 0.001
     num_epochs = 5000
 
-    model = CombinedModel().to(device=device)
+    model = SegNetModel(4).to(device=device)
 
     # Metrics
     precision = BinaryPrecision()

@@ -12,7 +12,7 @@ import cv2
 
 
 if __name__ == '__main__':
-    weights = torch.load("weights/best.pth", map_location='cpu')
+    weights = torch.load("weights/best_diceloss_unet.pth", map_location='cpu')
 
     load_dotenv('.env')
 
@@ -22,8 +22,8 @@ if __name__ == '__main__':
     # load model with trained weights
     model.load_state_dict(weights)
 
-    path = os.getenv("Images")
-    mask_path = os.getenv("Mask")
+    path = os.getenv("Images_Test")
+    mask_path = os.getenv("Masks_Test")
 
     xpaths = sorted(os.listdir(path))
 
@@ -48,7 +48,7 @@ if __name__ == '__main__':
     img_tensor = img_tensor.view(1, 3, 512, 512)
 
     # Get outputs
-    predictions = model(img_tensor)
+    predictions, _ = model(img_tensor)
     predictions_probabs = f.sigmoid(predictions)
 
     # Get the Mask
