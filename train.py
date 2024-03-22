@@ -165,7 +165,7 @@ def training_loop():
             # checkpoints
             if ((epoch+1) % 10 == 0 and epoch >= 1000):
                 torch.save(model.state_dict(),
-                           'weights/log_cosh_Unet/model{epoch}.pth'.format(epoch=epoch+1))
+                           'weights/log_cosh_unet/model{epoch}.pth'.format(epoch=epoch+1))
 
 
 if __name__ == '__main__':
@@ -220,7 +220,7 @@ if __name__ == '__main__':
         zip(image_paths_new, mask_paths_new))
 
     # Train-test split
-    train, test = train_test_split(paths_dataset, train_size=0.85)
+    train, test = train_test_split(paths_dataset, train_size=0.90)
 
     # Call the dataset
     train_set = BreastCancerDataset(train)

@@ -35,7 +35,7 @@ def evaluate():
 
 if __name__ == '__main__':
     weights = torch.load(
-        "weights/best.pth", map_location='cpu')
+        "weights/log_cosh_unet/model5000.pth", map_location='cpu')
 
     load_dotenv('.env')
 
