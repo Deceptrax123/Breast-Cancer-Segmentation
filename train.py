@@ -11,7 +11,7 @@ from cancer_dataset import BreastCancerDataset
 from torchmetrics.classification import BinaryRecall, BinaryPrecision
 from dotenv import load_dotenv
 from Model.Unet.model import CombinedModel
-from Model.Unet.model import Unet
+from Model.SegNet.model import SegNetModel
 import wandb
 from torchsummary import summary
 import os
