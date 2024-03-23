@@ -6,6 +6,7 @@ from torchmetrics.classification import BinaryPrecision, BinaryRecall
 from metrics import overall_dice_score
 import matplotlib.pyplot as plt
 from Model.Unet.model import CombinedModel
+from Model.SegNet.model import SegNetModel
 from dotenv import load_dotenv
 from cancer_dataset import TestBreastCancerDataset
 import torch.nn.functional as f
@@ -35,11 +36,11 @@ def evaluate():
 
 if __name__ == '__main__':
     weights = torch.load(
-        "weights/log_cosh_unet/model5000.pth", map_location='cpu')
+        "weights/segnet_diceloss/model4240.pth", map_location='cpu')
 
     load_dotenv('.env')
 
-    model = CombinedModel()
+    model = SegNetModel(4)
 
     # load model with trained weights
     model.load_state_dict(weights)
