@@ -164,7 +164,7 @@ def training_loop():
             # checkpoints
             if ((epoch+1) % 10 == 0 and epoch >= 1000):
                 torch.save(model.state_dict(),
-                           'weights/segnet_diceloss/model{epoch}.pth'.format(epoch=epoch+1))
+                           'weights/unet_bceloss/model{epoch}.pth'.format(epoch=epoch+1))
 
 
 if __name__ == '__main__':
