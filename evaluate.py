@@ -36,11 +36,11 @@ def evaluate():
 
 if __name__ == '__main__':
     weights = torch.load(
-        "weights/best_bceloss_segnet.pth", map_location='cpu')
+        "weights/unet_bceloss/model5000.pth", map_location='cpu')
 
     load_dotenv('.env')
 
-    model = SegNetModel(4)
+    model = CombinedModel()
 
     # load model with trained weights
     model.load_state_dict(weights)

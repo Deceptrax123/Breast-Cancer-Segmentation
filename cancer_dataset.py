@@ -31,7 +31,7 @@ class BreastCancerDataset(torch.utils.data.Dataset):
             T.Resize(size=(512, 512)), T.ToTensor(), T.Normalize(
                 mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5)),
             T.GaussianBlur(kernel_size=(5, 5), sigma=0.2), T.RandomSolarize(
-                threshold=0.3), T.RandomAutocontrast(), T.RandomEqualize(), T.RandomAdjustSharpness(sharpness_factor=2)
+                threshold=0.3), T.RandomAutocontrast(), T.RandomAdjustSharpness(sharpness_factor=2)
         ])
 
         process_function_y = T.Compose([

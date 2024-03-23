@@ -58,7 +58,7 @@ def train_step():
         model.zero_grad()
 
         # Loss function
-        loss = nn.BCEWithLogitsLoss(weight=weights)
+        loss = DiceLoss(weights=weights)
 
         loss_value = loss(predictions, y_sample)
 
@@ -103,7 +103,7 @@ def test_step():
         # Predictionns-Forward propagation
         predictions, probs = model(x_sample)
 
-        loss = nn.BCEWithLogitsLoss(weight=weights)
+        loss = DiceLoss(weights=weights)
         loss_value = loss(predictions, y_sample)
 
         # Add losses
