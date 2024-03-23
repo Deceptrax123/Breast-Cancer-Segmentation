@@ -236,7 +236,7 @@ if __name__ == '__main__':
     lr = 0.001
     num_epochs = 5000
 
-    model = SegNetModel(4).to(device=device)
+    model = CombinedModel().to(device=device)
 
     # Metrics
     precision = BinaryPrecision()
