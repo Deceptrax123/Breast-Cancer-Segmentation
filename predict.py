@@ -3,6 +3,7 @@ import torch
 import torchvision.transforms as T
 import matplotlib.pyplot as plt
 from Model.Unet.model import CombinedModel
+from Model.SegNet.model import SegNetModel
 from dotenv import load_dotenv
 import torch.nn.functional as f
 import os
@@ -12,11 +13,11 @@ import cv2
 
 
 if __name__ == '__main__':
-    weights = torch.load("weights/best_diceloss_unet.pth", map_location='cpu')
+    weights = torch.load("weights/best_segnet_dice.pth", map_location='cpu')
 
     load_dotenv('.env')
 
-    model = CombinedModel()
+    model = SegNetModel(4)
     model.eval()
 
     # load model with trained weights
