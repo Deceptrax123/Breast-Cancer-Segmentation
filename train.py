@@ -5,6 +5,8 @@ from torch import mps, cpu
 import numpy as np
 import gc
 from sklearn.model_selection import train_test_split
+from torchvision.ops import sigmoid_focal_loss
+from losses import FocalLoss
 from metrics import overall_dice_score
 from losses import DiceLoss
 from cancer_dataset import BreastCancerDataset
@@ -59,7 +61,6 @@ def train_step():
 
         # Loss function
         loss = DiceLoss(weights=weights)
-
         loss_value = loss(predictions, y_sample)
 
         loss_value.backward()
@@ -82,6 +83,7 @@ def train_step():
         del x_sample
         del y_sample
         del predictions
+        del probs
 
         mps.empty_cache()
 
@@ -121,6 +123,7 @@ def test_step():
         del x_sample
         del y_sample
         del predictions
+        del probs
 
         mps.empty_cache()
 
@@ -164,7 +167,7 @@ def training_loop():
             # checkpoints
             if ((epoch+1) % 10 == 0 and epoch >= 1000):
                 torch.save(model.state_dict(),
-                           'weights/segnet_diceloss/model{epoch}.pth'.format(epoch=epoch+1))
+                           'weights/unet_dice_loss/model{epoch}.pth'.format(epoch=epoch+1))
 
 
 if __name__ == '__main__':
@@ -244,6 +247,8 @@ if __name__ == '__main__':
 
     model_optimizer = torch.optim.Adam(
         model.parameters(), lr=lr, betas=(0.9, 0.999), weight_decay=0.001)
+
+    # loss = FocalLoss(gamma=0, alpha=0.25, size_average=True)
 
     train_steps = (len(train_set)+params['batch_size'])//params['batch_size']
     test_steps = (len(test_set)+params['batch_size'])//params['batch_size']
