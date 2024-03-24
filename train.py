@@ -60,7 +60,7 @@ def train_step():
         model.zero_grad()
 
         # Loss function
-        loss = DiceLoss(weights=weights)
+        loss = nn.BCEWithLogitsLoss(weight=weights)
         loss_value = loss(predictions, y_sample)
 
         loss_value.backward()
@@ -105,7 +105,7 @@ def test_step():
         # Predictionns-Forward propagation
         predictions, probs = model(x_sample)
 
-        loss = DiceLoss(weights=weights)
+        loss = nn.BCELoss(weight=weights)
         loss_value = loss(predictions, y_sample)
 
         # Add losses
@@ -167,7 +167,7 @@ def training_loop():
             # checkpoints
             if ((epoch+1) % 10 == 0 and epoch >= 1000):
                 torch.save(model.state_dict(),
-                           'weights/unet_dice_loss/model{epoch}.pth'.format(epoch=epoch+1))
+                           'weights/segnet_bce_loss/model{epoch}.pth'.format(epoch=epoch+1))
 
 
 if __name__ == '__main__':
