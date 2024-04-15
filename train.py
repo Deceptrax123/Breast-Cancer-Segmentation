@@ -1,7 +1,7 @@
 import torch
 from torch.utils.data import DataLoader
 from torch import nn
-from torch import mps, cpu
+from torch import cuda, cpu
 import numpy as np
 import gc
 from sklearn.model_selection import train_test_split
@@ -71,7 +71,7 @@ def train_step():
         del y_sample
         del predictions
 
-        mps.empty_cache()
+        cuda.empty_cache()
 
     return epoch_loss/train_steps, dice_score/train_steps
 
@@ -102,7 +102,7 @@ def test_step():
         del y_sample
         del predictions
 
-        mps.empty_cache()
+        cuda.empty_cache()
 
     return epoch_loss/test_steps, dice_score/test_steps
 
@@ -185,7 +185,7 @@ if __name__ == '__main__':
     test_loader = DataLoader(dataset=test_set, **params)
 
     # Device
-    device = torch.device("mps")
+    device = torch.device("cuda")
 
     # Hyperparameters
     lr = 0.001
