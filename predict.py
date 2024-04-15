@@ -2,7 +2,8 @@ import numpy as np
 import torch
 import torchvision.transforms as T
 import matplotlib.pyplot as plt
-from Model.model import CombinedModel
+from Model.Unet.model import CombinedModel
+from Model.SegNet.model import SegNetModel
 from dotenv import load_dotenv
 import torch.nn.functional as f
 import os
@@ -12,18 +13,18 @@ import cv2
 
 
 if __name__ == '__main__':
-    weights = torch.load("weights/model1000.pth", map_location='cpu')
+    weights = torch.load("weights/best_segnet_dice.pth", map_location='cpu')
 
     load_dotenv('.env')
 
-    model = CombinedModel()
+    model = SegNetModel(4)
     model.eval()
 
     # load model with trained weights
     model.load_state_dict(weights)
 
-    path = os.getenv("Images")
-    mask_path = os.getenv("Mask")
+    path = os.getenv("Images_Test")
+    mask_path = os.getenv("Masks_Test")
 
     xpaths = sorted(os.listdir(path))
 
@@ -38,6 +39,8 @@ if __name__ == '__main__':
     img = Image.open(path+random_img_path)
     mask = Image.open(mask_path+random_img_path)
 
+    mask = mask.resize((512, 512), Image.LANCZOS)
+
     tens_transform = T.Compose([
         T.Resize((512, 512)), T.ToTensor(), T.Normalize(
             mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))])
@@ -46,7 +49,7 @@ if __name__ == '__main__':
     img_tensor = img_tensor.view(1, 3, 512, 512)
 
     # Get outputs
-    predictions = model(img_tensor)
+    predictions, _ = model(img_tensor)
     predictions_probabs = f.sigmoid(predictions)
 
     # Get the Mask

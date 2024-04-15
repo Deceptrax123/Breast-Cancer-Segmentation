@@ -1,6 +1,7 @@
 import torch
 from torch.nn import Conv2d, Module
-from Model.unet import Unet
+from Model.Unet.unet import Unet
+import torch.nn.functional as f
 
 
 class CombinedModel(Module):
@@ -17,4 +18,4 @@ class CombinedModel(Module):
         x = self.unet(x)
         x = self.output(x)
 
-        return x
+        return x, f.sigmoid(x)

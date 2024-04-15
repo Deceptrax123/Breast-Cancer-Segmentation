@@ -5,12 +5,16 @@ from torch import cuda, cpu
 import numpy as np
 import gc
 from sklearn.model_selection import train_test_split
+from torchvision.ops import sigmoid_focal_loss
+from losses import FocalLoss
 from metrics import overall_dice_score
 from losses import DiceLoss
 from cancer_dataset import BreastCancerDataset
+from torchmetrics.classification import BinaryRecall, BinaryPrecision
 from dotenv import load_dotenv
-from Model.model import CombinedModel
-from Model.model import Unet
+from Model.Unet.model import CombinedModel
+from Model.SegNet.model import SegNetModel
+import wandb
 from torchsummary import summary
 import os
 
@@ -40,6 +44,8 @@ def compute_weights(y_sample):
 def train_step():
     epoch_loss = 0
     dice_score = 0
+    rec = 0
+    prec = 0
 
     for step, (x_sample, y_sample) in enumerate(train_loader):
         weights = compute_weights(y_sample)
@@ -48,15 +54,13 @@ def train_step():
         weights = torch.from_numpy(weights).to(device=device)
 
         # Predictionns-Forward propagation
-        predictions = model(x_sample)
+        predictions, probs = model(x_sample)
 
         # Backpropagation
         model.zero_grad()
 
         # Loss function
-        # More stable than BCELoss()
-        loss = DiceLoss(weights=weights)
-
+        loss = nn.BCEWithLogitsLoss(weight=weights)
         loss_value = loss(predictions, y_sample)
 
         loss_value.backward()
@@ -64,21 +68,33 @@ def train_step():
 
         # Add losses
         epoch_loss += loss_value.item()
+
+        # Add Metrics
         dice_score += overall_dice_score(predictions, y_sample).item()
+
+        # Detach tensors from GPU
+        probs = probs.to(device='cpu')
+        y_sample = y_sample.to(device='cpu')
+
+        prec += precision(probs, y_sample).item()
+        rec += recall(probs, y_sample).item()
 
         # Memory
         del x_sample
         del y_sample
         del predictions
+        del probs
 
         cuda.empty_cache()
 
-    return epoch_loss/train_steps, dice_score/train_steps
+    return epoch_loss/train_steps, dice_score/train_steps, prec/train_steps, rec/train_steps
 
 
 def test_step():
     epoch_loss = 0
     dice_score = 0
+    prec = 0
+    rec = 0
 
     for step, (x_sample, y_sample) in enumerate(test_loader):
         weights = compute_weights(y_sample)
@@ -87,24 +103,31 @@ def test_step():
         weights = torch.from_numpy(weights).to(device=device)
 
         # Predictionns-Forward propagation
-        predictions = model(x_sample)
+        predictions, probs = model(x_sample)
 
-        # loss = nn.BCEWithLogitsLoss()
-        loss = DiceLoss(weights=weights)
+        loss = nn.BCELoss(weight=weights)
         loss_value = loss(predictions, y_sample)
 
         # Add losses
         epoch_loss += loss_value.item()
         dice_score += overall_dice_score(predictions, y_sample).item()
 
+        # Detach tensors from GPU
+        probs = probs.to(device='cpu')
+        y_sample = y_sample.to(device='cpu')
+
+        prec += precision(probs, y_sample).item()
+        rec += recall(probs, y_sample).item()
+
         # Memory
         del x_sample
         del y_sample
         del predictions
+        del probs
 
         cuda.empty_cache()
 
-    return epoch_loss/test_steps, dice_score/test_steps
+    return epoch_loss/test_steps, dice_score/test_steps, prec/test_steps, rec/test_steps
 
 
 def training_loop():
@@ -112,22 +135,39 @@ def training_loop():
     for epoch in range(num_epochs):
         model.train(True)  # switch model to train mode
 
-        train_loss, train_dice = train_step()
+        train_loss, train_dice, train_precision, train_recall = train_step()
         model.eval()
 
         with torch.no_grad():
-            test_loss, test_dice = test_step()
+            test_loss, test_dice, test_precision, test_recall = test_step()
 
             print("Epoch: ", epoch+1)
             print("Train Loss: ", train_loss)
-            print("Train Dice", train_dice)
+            print("Train Dice: ", train_dice)
+            print("Train Precision: ", train_precision)
+            print("Train Precision: ", train_precision)
+            print("Test Precision: ", test_precision)
+
             print("Test Loss: ", test_loss)
             print("Test Dice: ", test_dice)
+            print("Test Precision: ", test_precision)
+            print("Test Recall: ", test_recall)
+
+            wandb.log({
+                "Train Loss": train_loss,
+                "Test Loss": test_loss,
+                "Train Precision": train_precision,
+                "Train Recall": train_recall,
+                "Train Dice": train_dice,
+                "Test Precision": test_precision,
+                "Test Recall": test_recall,
+                "Test Dice": test_dice
+            })
 
             # checkpoints
-            if ((epoch+1) % 10 == 0):
+            if ((epoch+1) % 10 == 0 and epoch >= 1000):
                 torch.save(model.state_dict(),
-                           'weights/model{epoch}.pth'.format(epoch=epoch+1))
+                           'weights/segnet_bce_loss/model{epoch}.pth'.format(epoch=epoch+1))
 
 
 if __name__ == '__main__':
@@ -146,6 +186,14 @@ if __name__ == '__main__':
         'shuffle': True,
         'num_workers': 0
     }
+
+    wandb.init(
+        project='Loss-Functions-Breast-Cancer',
+        config={
+            "arcitecture": "DL Models",
+            "dataset": "Breast cancer dataset"
+        }
+    )
 
     # Store paths in a list
     image_env_paths = os.getenv("Images")
@@ -189,11 +237,18 @@ if __name__ == '__main__':
 
     # Hyperparameters
     lr = 0.001
-    num_epochs = 1000
+    num_epochs = 5000
 
-    model = CombinedModel().to(device=device)
+    model = SegNetModel(4).to(device=device)
+
+    # Metrics
+    precision = BinaryPrecision()
+    recall = BinaryRecall()
+
     model_optimizer = torch.optim.Adam(
         model.parameters(), lr=lr, betas=(0.9, 0.999), weight_decay=0.001)
+
+    # loss = FocalLoss(gamma=0, alpha=0.25, size_average=True)
 
     train_steps = (len(train_set)+params['batch_size'])//params['batch_size']
     test_steps = (len(test_set)+params['batch_size'])//params['batch_size']
